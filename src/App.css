@@ -1,0 +1,104 @@
+/* 앱 전체를 감싸는 수직 레이아웃 컨테이너 */
+.app-vertical-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: #1e1e1e;
+}
+/* 탭 바 스타일 */
+.tab-bar {
+  width: 100%;
+  display: flex;
+  background: #23272e;
+  border-bottom: 1px solid #333;
+  z-index: 10;
+}
+.tab {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 1rem;
+  padding: 16px 28px 12px 28px;
+  cursor: pointer;
+  outline: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-bottom 0.2s;
+}
+.tab.active {
+  color: #fff;
+  border-bottom: 2.5px solid #007acc;
+  background: #23272e;
+}
+/* App.css - CCTV 그리드 및 레이아웃 스타일 */
+.app-container {
+  display: flex;
+  flex: 1 1 0%;
+  background-color: #1e1e1e;
+  color: white;
+  overflow: hidden;
+  min-height: 0;
+}
+.sidebar {
+  width: 250px;
+  background-color: #252526;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+.list-item {
+  padding: 10px;
+  margin-bottom: 5px;
+  background-color: #333;
+  cursor: grab;
+  border-radius: 4px;
+  user-select: none;
+}
+.list-item:active {
+  cursor: grabbing;
+  background-color: #007acc;
+}
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.video-grid {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  gap: 15px;
+  /* 카메라 개수에 따라 정사각형 그리드 유지 */
+  /* 기본값: 3x3, 4x4 등으로 맞추고 싶으면 JS에서 동적으로 cols 계산 추천 */
+  grid-template-columns: repeat(var(--video-grid-cols, 3), 1fr);
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  justify-items: stretch;
+}
+.video-card {
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.video-card p {
+  padding: 8px;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  background-color: #333;
+}

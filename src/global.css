@@ -1,0 +1,9 @@
+/* global.css - 전체 바깥(Body, html) 스크롤 제거 */
+html, body {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
