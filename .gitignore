@@ -142,3 +142,72 @@ dist
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+# ==================== Python Backend ====================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+backend/venv/
+backend/env/
+
+# Python package files
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==================== Generated Files ====================
+# TypeScript types generated from OpenAPI
+api-schema/generated/
+
+# Python models (if auto-generated in the future)
+# backend/app/models/generated/
+
+# ==================== Database ====================
+*.db
+*.sqlite
+*.sqlite3
+cctv.db
+
+# ==================== Electron ====================
+# Electron build output
+dist-electron/
+out/
+
+# ==================== IDE ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

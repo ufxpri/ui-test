@@ -1,0 +1,888 @@
+openapi: 3.1.0
+info:
+  title: CCTV Monitoring System API
+  description: |
+    API for CCTV monitoring system with real-time video streaming, alerts, and process monitoring.
+
+    ## Communication Patterns
+    - **REST API**: CRUD operations, queries (cameras, settings, search)
+    - **WebSocket**: Real-time updates (alerts, process status)
+    - **RTSP/HLS**: Video streaming (handled separately)
+  version: 1.0.0
+  contact:
+    name: CCTV Monitoring Team
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: http://localhost:8000/api/v1
+    description: API v1 base path
+
+tags:
+  - name: cameras
+    description: Camera management and configuration
+  - name: alerts
+    description: Alert history and configuration
+  - name: process
+    description: Backend process monitoring
+  - name: search
+    description: Video and event search
+  - name: settings
+    description: System settings
+
+paths:
+  # ==================== Camera APIs ====================
+  /cameras:
+    get:
+      operationId: getAllCameras
+      summary: Get all cameras
+      description: Retrieve list of all configured cameras with their current status
+      tags: [cameras]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraListResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      operationId: createCamera
+      summary: Create new camera
+      description: Add a new camera to the system
+      tags: [cameras]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraInput'
+      responses:
+        '201':
+          description: Camera created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cameras/{cameraId}:
+    get:
+      operationId: getCamera
+      summary: Get camera by ID
+      tags: [cameras]
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraResponse'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      operationId: updateCamera
+      summary: Update camera
+      tags: [cameras]
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraInput'
+      responses:
+        '200':
+          description: Camera updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraResponse'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      operationId: deleteCamera
+      summary: Delete camera
+      tags: [cameras]
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Camera deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cameras/{cameraId}/status:
+    patch:
+      operationId: updateCameraStatus
+      summary: Update camera status
+      description: Update only the status of a camera (active/inactive/error)
+      tags: [cameras]
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/CameraStatus'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraResponse'
+
+  /cameras/reorder:
+    post:
+      operationId: reorderCameras
+      summary: Reorder cameras
+      description: Update the display order of cameras (for drag-and-drop)
+      tags: [cameras]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cameraIds]
+              properties:
+                cameraIds:
+                  type: array
+                  items:
+                    type: integer
+                  description: Ordered list of camera IDs
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Alert APIs ====================
+  /alerts:
+    get:
+      operationId: getAlerts
+      summary: Get alerts
+      description: Retrieve alert history with pagination and filtering
+      tags: [alerts]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 500
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: severity
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AlertSeverity'
+        - name: cameraId
+          in: query
+          schema:
+            type: integer
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertListResponse'
+
+  /alerts/{alertId}:
+    get:
+      operationId: getAlert
+      summary: Get alert by ID
+      tags: [alerts]
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+
+  /alerts/{alertId}/acknowledge:
+    post:
+      operationId: acknowledgeAlert
+      summary: Acknowledge alert
+      description: Mark an alert as acknowledged by user
+      tags: [alerts]
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alert acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+
+  # ==================== Process Monitoring APIs ====================
+  /process/status:
+    get:
+      operationId: getProcessStatus
+      summary: Get process status
+      description: Get current status of all backend processes
+      tags: [process]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatusResponse'
+
+  /process/metrics:
+    get:
+      operationId: getProcessMetrics
+      summary: Get process metrics
+      description: Get detailed metrics for backend processes (CPU, memory, etc.)
+      tags: [process]
+      parameters:
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 1h
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessMetricsResponse'
+
+  # ==================== Search APIs ====================
+  /search/videos:
+    get:
+      operationId: searchVideos
+      summary: Search recorded videos
+      description: Search through recorded CCTV footage
+      tags: [search]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cameraIds
+          in: query
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: startTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoSearchResponse'
+
+  /search/events:
+    get:
+      operationId: searchEvents
+      summary: Search events
+      description: Search through detection events (motion, person, vehicle, etc.)
+      tags: [search]
+      parameters:
+        - name: eventType
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [motion, person, vehicle, face, object]
+        - name: cameraIds
+          in: query
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: startTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSearchResponse'
+
+  # ==================== Settings APIs ====================
+  /settings:
+    get:
+      operationId: getSettings
+      summary: Get system settings
+      tags: [settings]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+    put:
+      operationId: updateSettings
+      summary: Update system settings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsInput'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+# ==================== Schemas ====================
+components:
+  schemas:
+    # Base response types
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Error message"
+        code:
+          type: string
+          example: "CAMERA_NOT_FOUND"
+
+    # Camera schemas
+    Camera:
+      type: object
+      required: [id, title, src, status, createdAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "CCTV Feed #1"
+        src:
+          type: string
+          format: uri
+          example: "rtsp://192.168.1.100:554/stream"
+          description: "Video stream URL (RTSP, HLS, or HTTP)"
+        status:
+          $ref: '#/components/schemas/CameraStatus'
+        location:
+          type: string
+          example: "Building A - Entrance"
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+          description: "Order in the UI (for drag-and-drop)"
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+          description: "Additional camera metadata"
+
+    CameraStatus:
+      type: string
+      enum: [active, inactive, error, connecting]
+      description: |
+        Camera operational status:
+        - active: Camera is streaming and working
+        - inactive: Camera is configured but not streaming
+        - error: Camera has an error (connection failed, etc.)
+        - connecting: Camera is in the process of connecting
+
+    CameraInput:
+      type: object
+      required: [title, src]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        src:
+          type: string
+          format: uri
+        location:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    CameraResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/Camera'
+
+    CameraListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Camera'
+
+    # Alert schemas
+    Alert:
+      type: object
+      required: [id, cameraId, type, severity, timestamp, status]
+      properties:
+        id:
+          type: string
+          example: "alert_20240112_001"
+        cameraId:
+          type: integer
+          example: 1
+        cameraTitle:
+          type: string
+          example: "CCTV Feed #1"
+        type:
+          type: string
+          enum: [motion, person_detected, vehicle_detected, face_detected, intrusion, line_crossing, object_detection]
+          example: "person_detected"
+        severity:
+          $ref: '#/components/schemas/AlertSeverity'
+        message:
+          type: string
+          example: "Person detected in restricted area"
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [new, acknowledged, resolved]
+          example: "new"
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: "URL to alert thumbnail image"
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: "URL to alert video clip"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: "Additional alert metadata (confidence score, bounding boxes, etc.)"
+
+    AlertSeverity:
+      type: string
+      enum: [low, medium, high, critical]
+
+    AlertResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/Alert'
+
+    AlertListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data, total]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alert'
+            total:
+              type: integer
+              description: "Total number of alerts matching the query"
+            hasMore:
+              type: boolean
+              description: "Whether there are more results available"
+
+    # Process monitoring schemas
+    ProcessInfo:
+      type: object
+      required: [name, status, pid, uptime]
+      properties:
+        name:
+          type: string
+          example: "video_processor"
+        status:
+          type: string
+          enum: [running, stopped, error, starting]
+        pid:
+          type: integer
+          example: 12345
+          nullable: true
+        uptime:
+          type: integer
+          description: "Uptime in seconds"
+          example: 86400
+        cpuPercent:
+          type: number
+          format: float
+          example: 45.2
+        memoryMB:
+          type: number
+          format: float
+          example: 512.5
+        lastError:
+          type: string
+          nullable: true
+
+    ProcessStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [processes, systemInfo]
+              properties:
+                processes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProcessInfo'
+                systemInfo:
+                  type: object
+                  properties:
+                    totalCpuPercent:
+                      type: number
+                    totalMemoryMB:
+                      type: number
+                    availableMemoryMB:
+                      type: number
+
+    ProcessMetricsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              properties:
+                metrics:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      cpuPercent:
+                        type: number
+                      memoryMB:
+                        type: number
+
+    # Search schemas
+    VideoSearchResult:
+      type: object
+      required: [id, cameraId, startTime, endTime, thumbnailUrl]
+      properties:
+        id:
+          type: string
+        cameraId:
+          type: integer
+        cameraTitle:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: "Duration in seconds"
+        thumbnailUrl:
+          type: string
+          format: uri
+        videoUrl:
+          type: string
+          format: uri
+        fileSize:
+          type: integer
+          description: "File size in bytes"
+
+    VideoSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/VideoSearchResult'
+
+    EventSearchResult:
+      type: object
+      required: [id, cameraId, eventType, timestamp]
+      properties:
+        id:
+          type: string
+        cameraId:
+          type: integer
+        cameraTitle:
+          type: string
+        eventType:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        thumbnailUrl:
+          type: string
+          format: uri
+        metadata:
+          type: object
+
+    EventSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventSearchResult'
+
+    # Settings schemas
+    Settings:
+      type: object
+      properties:
+        recording:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            retentionDays:
+              type: integer
+        alerts:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            emailNotifications:
+              type: boolean
+            pushNotifications:
+              type: boolean
+        video:
+          type: object
+          properties:
+            defaultQuality:
+              type: string
+              enum: [low, medium, high]
+            frameRate:
+              type: integer
+
+    SettingsInput:
+      $ref: '#/components/schemas/Settings'
+
+    SettingsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/Settings'
+
+    # WebSocket Event schemas (for documentation)
+    WebSocketEvent:
+      oneOf:
+        - $ref: '#/components/schemas/AlertEvent'
+        - $ref: '#/components/schemas/ProcessStatusEvent'
+        - $ref: '#/components/schemas/CameraStatusEvent'
+
+    AlertEvent:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          enum: [alert.new]
+        data:
+          $ref: '#/components/schemas/Alert'
+
+    ProcessStatusEvent:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          enum: [process.status_changed]
+        data:
+          $ref: '#/components/schemas/ProcessInfo'
+
+    CameraStatusEvent:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          enum: [camera.status_changed]
+        data:
+          type: object
+          required: [cameraId, status]
+          properties:
+            cameraId:
+              type: integer
+            status:
+              $ref: '#/components/schemas/CameraStatus'
+            message:
+              type: string
